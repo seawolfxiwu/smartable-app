@@ -1,25 +1,35 @@
 'use server';
 
-import { extractTable } from '@/ai/flows/extract-table-from-image';
+import { extractTable, type ExtractTableInput } from '@/ai/flows/extract-table-from-image';
 import { generateWordDoc, type GenerateWordDocInput } from '@/ai/flows/generate-word-doc';
 import { translateTable, type TranslateTableInput } from '@/ai/flows/translate-table';
 
-export async function handleExtractTable(photoDataUri: string) {
+interface ActionOptions {
+    apiKey?: string;
+}
+
+export async function handleExtractTable(input: ExtractTableInput, options: ActionOptions) {
   try {
-    const result = await extractTable({ photoDataUri });
+    const result = await extractTable(input, options.apiKey);
     return { success: true, data: result };
   } catch (error) {
     console.error('Error extracting table:', error);
+    if (error instanceof Error && error.message.includes('API key not valid')) {
+        return { success: false, error: 'The provided API key is not valid. Please check your key in the settings and try again.' };
+    }
     return { success: false, error: 'Failed to extract table from image.' };
   }
 }
 
-export async function handleTranslateTable(input: TranslateTableInput) {
+export async function handleTranslateTable(input: TranslateTableInput, options: ActionOptions) {
   try {
-    const result = await translateTable(input);
+    const result = await translateTable(input, options.apiKey);
     return { success: true, data: result };
   } catch (error) {
     console.error('Error translating table:', error);
+    if (error instanceof Error && error.message.includes('API key not valid')) {
+        return { success: false, error: 'The provided API key is not valid. Please check your key in the settings and try again.' };
+    }
     return { success: false, error: 'Failed to translate table.' };
   }
 }

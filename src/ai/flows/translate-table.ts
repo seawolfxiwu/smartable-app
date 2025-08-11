@@ -9,6 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import { googleAI } from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const TranslateTableInputSchema = z.object({
@@ -26,35 +27,9 @@ const TranslateTableOutputSchema = z.object({
 });
 export type TranslateTableOutput = z.infer<typeof TranslateTableOutputSchema>;
 
-export async function translateTable(input: TranslateTableInput): Promise<TranslateTableOutput> {
-  return translateTableFlow(input);
+export async function translateTable(input: TranslateTableInput, apiKey?: string): Promise<TranslateTableOutput> {
+  return translateTableFlow(input, { auth: apiKey });
 }
-
-const translateTablePrompt = ai.definePrompt({
-  name: 'translateTablePrompt',
-  input: {schema: TranslateTableInputSchema},
-  output: {schema: TranslateTableOutputSchema},
-  prompt: `You are a translation expert.
-
-  Translate the following table title, data, and footnotes to the target language, maintaining the original format and structure.
-  The target language is: {{{targetLanguage}}}.
-
-  {{#if title}}
-  Title:
-  {{{title}}}
-  {{/if}}
-
-  Table Data (CSV):
-  {{{tableData}}}
-
-  {{#if footnotes}}
-  Footnotes:
-  {{{footnotes}}}
-  {{/if}}
-
-  Return only the translated content in the specified JSON format.
-  `,
-});
 
 const translateTableFlow = ai.defineFlow(
   {
@@ -62,8 +37,38 @@ const translateTableFlow = ai.defineFlow(
     inputSchema: TranslateTableInputSchema,
     outputSchema: TranslateTableOutputSchema,
   },
-  async input => {
-    const {output} = await translateTablePrompt(input);
+  async (input, streamingCallback, context) => {
+    const apiKey = context?.auth as string | undefined;
+
+    const translateTablePrompt = ai.definePrompt({
+      name: 'translateTablePrompt',
+      input: {schema: TranslateTableInputSchema},
+      output: {schema: TranslateTableOutputSchema},
+      prompt: `You are a translation expert.
+
+      Translate the following table title, data, and footnotes to the target language, maintaining the original format and structure.
+      The target language is: {{{targetLanguage}}}.
+
+      {{#if title}}
+      Title:
+      {{{title}}}
+      {{/if}}
+
+      Table Data (CSV):
+      {{{tableData}}}
+
+      {{#if footnotes}}
+      Footnotes:
+      {{{footnotes}}}
+      {{/if}}
+
+      Return only the translated content in the specified JSON format.
+      `,
+    });
+
+    const {output} = await translateTablePrompt(input, {
+        plugins: apiKey ? [googleAI({apiKey})] : undefined,
+    });
     return output!;
   }
 );
