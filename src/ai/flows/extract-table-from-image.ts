@@ -9,7 +9,6 @@
  */
 
 import {ai} from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/googleai';
 import {z} from 'genkit';
 
 const ExtractTableInputSchema = z.object({
@@ -30,9 +29,24 @@ const ExtractTableOutputSchema = z.object({
 });
 export type ExtractTableOutput = z.infer<typeof ExtractTableOutputSchema>;
 
-export async function extractTable(input: ExtractTableInput, apiKey?: string): Promise<ExtractTableOutput> {
-  return extractTableFlow(input, { auth: apiKey });
+export async function extractTable(input: ExtractTableInput): Promise<ExtractTableOutput> {
+  return extractTableFlow(input);
 }
+
+const prompt = ai.definePrompt({
+  name: 'extractTablePrompt',
+  input: {schema: ExtractTableInputSchema},
+  output: {schema: ExtractTableOutputSchema},
+  prompt: `You are an expert in extracting data from tables in images.
+
+  Given the following image of a table, extract the table title, data, and footnotes.
+  The table data should be in CSV format.
+  Recognize any words outside of the table, such as a table title or footnotes, and place them in the appropriate fields.
+  Do not include any additional context or explanation.
+
+  Image: {{media url=photoDataUri}}
+  `,
+});
 
 const extractTableFlow = ai.defineFlow(
   {
@@ -40,27 +54,8 @@ const extractTableFlow = ai.defineFlow(
     inputSchema: ExtractTableInputSchema,
     outputSchema: ExtractTableOutputSchema,
   },
-  async (input, streamingCallback, context) => {
-    const apiKey = context?.auth as string | undefined;
-
-    const prompt = ai.definePrompt({
-      name: 'extractTablePrompt',
-      input: {schema: ExtractTableInputSchema},
-      output: {schema: ExtractTableOutputSchema},
-      prompt: `You are an expert in extracting data from tables in images.
-
-      Given the following image of a table, extract the table title, data, and footnotes.
-      The table data should be in CSV format.
-      Recognize any words outside of the table, such as a table title or footnotes, and place them in the appropriate fields.
-      Do not include any additional context or explanation.
-
-      Image: {{media url=photoDataUri}}
-      `,
-    });
-
-    const {output} = await prompt(input, {
-        plugins: apiKey ? [googleAI({apiKey})] : undefined,
-    });
+  async (input) => {
+    const {output} = await prompt(input);
     return output!;
   }
 );

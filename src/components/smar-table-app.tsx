@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import {
   Card,
@@ -15,7 +15,7 @@ import { handleExtractTable, handleGenerateWordDoc, handleTranslateTable } from 
 import { downloadCsv, formatCsv, parseCsv, type TableData } from '@/lib/csv';
 import { FileUpload } from './file-upload';
 import { DataTable } from './data-table';
-import { Download, Languages, Loader2, FileText, Settings } from 'lucide-react';
+import { Download, Languages, Loader2, FileText } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -27,15 +27,6 @@ import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { downloadFile } from '@/lib/download';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from './ui/dialog';
 
 const LANGUAGES = [
   { value: 'English', label: 'English' },
@@ -51,10 +42,6 @@ const LANGUAGES = [
 ];
 
 export default function SmarTableApp() {
-  const [apiKey, setApiKey] = useState('');
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [originalTable, setOriginalTable] = useState<TableData | null>(null);
@@ -69,36 +56,8 @@ export default function SmarTableApp() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const storedApiKey = localStorage.getItem('gemini-api-key');
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-      setApiKeyInput(storedApiKey);
-    }
-  }, []);
-
-  const handleApiKeySave = () => {
-    setApiKey(apiKeyInput);
-    localStorage.setItem('gemini-api-key', apiKeyInput);
-    setIsSettingsOpen(false);
-    toast({
-      title: 'API Key Saved',
-      description: 'Your Gemini API key has been saved locally.',
-    });
-  };
   
   const handleFileSelect = async (file: File) => {
-    if (!apiKey) {
-      toast({
-        variant: 'destructive',
-        title: 'API Key Required',
-        description: 'Please set your Gemini API key in the settings before uploading an image.',
-      });
-      setIsSettingsOpen(true);
-      return;
-    }
-
     setIsExtracting(true);
     setOriginalTable(null);
     setTranslatedTable(null);
@@ -114,7 +73,7 @@ export default function SmarTableApp() {
       const dataUri = reader.result as string;
       setImagePreview(dataUri);
 
-      const result = await handleExtractTable({ photoDataUri: dataUri }, { apiKey });
+      const result = await handleExtractTable({ photoDataUri: dataUri });
       if (result.success && result.data) {
         setOriginalTable(parseCsv(result.data.tableData));
         setTitle(result.data.title || '');
@@ -145,14 +104,6 @@ export default function SmarTableApp() {
 
   const handleTranslate = async () => {
     if (!originalTable) return;
-    if (!apiKey) {
-      toast({
-        variant: 'destructive',
-        title: 'API Key Required',
-        description: 'Please set your Gemini API key in the settings before translating.',
-      });
-      return;
-    }
     setIsTranslating(true);
     setTranslatedTable(null);
     setTranslatedTitle('');
@@ -163,7 +114,7 @@ export default function SmarTableApp() {
       title,
       footnotes,
       targetLanguage: targetLang,
-    }, {apiKey});
+    });
 
     if (result.success && result.data) {
       setTranslatedTable(parseCsv(result.data.translatedTableData));
@@ -242,35 +193,6 @@ export default function SmarTableApp() {
               <span className="font-bold">SmarTable</span>
             </a>
           </div>
-          <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Settings className="h-5 w-5" />
-                <span className="sr-only">Settings</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Settings</DialogTitle>
-                <DialogDescription>
-                  Configure your Gemini API Key. Your key is stored securely in your browser&apos;s local storage and is never shared.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2">
-                <Label htmlFor="apiKey">Gemini API Key</Label>
-                <Input
-                  id="apiKey"
-                  type="password"
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  placeholder="Enter your Gemini API Key"
-                />
-              </div>
-              <DialogFooter>
-                <Button onClick={handleApiKeySave}>Save Key</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
       </header>
 

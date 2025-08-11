@@ -4,31 +4,27 @@ import { extractTable, type ExtractTableInput } from '@/ai/flows/extract-table-f
 import { generateWordDoc, type GenerateWordDocInput } from '@/ai/flows/generate-word-doc';
 import { translateTable, type TranslateTableInput } from '@/ai/flows/translate-table';
 
-interface ActionOptions {
-    apiKey?: string;
-}
-
-export async function handleExtractTable(input: ExtractTableInput, options: ActionOptions) {
+export async function handleExtractTable(input: ExtractTableInput) {
   try {
-    const result = await extractTable(input, options.apiKey);
+    const result = await extractTable(input);
     return { success: true, data: result };
   } catch (error) {
     console.error('Error extracting table:', error);
-    if (error instanceof Error && error.message.includes('API key not valid')) {
-        return { success: false, error: 'The provided API key is not valid. Please check your key in the settings and try again.' };
+    if (error instanceof Error && (error.message.includes('API key not valid') || error.message.includes('Please pass in the API key'))) {
+        return { success: false, error: 'The Gemini API key is not valid or missing. Please check your environment variables.' };
     }
     return { success: false, error: 'Failed to extract table from image.' };
   }
 }
 
-export async function handleTranslateTable(input: TranslateTableInput, options: ActionOptions) {
+export async function handleTranslateTable(input: TranslateTableInput) {
   try {
-    const result = await translateTable(input, options.apiKey);
+    const result = await translateTable(input);
     return { success: true, data: result };
   } catch (error) {
     console.error('Error translating table:', error);
-    if (error instanceof Error && error.message.includes('API key not valid')) {
-        return { success: false, error: 'The provided API key is not valid. Please check your key in the settings and try again.' };
+    if (error instanceof Error && (error.message.includes('API key not valid') || error.message.includes('Please pass in the API key'))) {
+        return { success: false, error: 'The Gemini API key is not valid or missing. Please check your environment variables.' };
     }
     return { success: false, error: 'Failed to translate table.' };
   }
