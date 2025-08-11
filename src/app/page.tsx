@@ -8,7 +8,7 @@ export default function Home() {
         <div className="container flex h-14 items-center">
           <div className="mr-4 flex items-center">
             <a className="flex items-center space-x-2" href="/">
-              <Image src="https://placehold.co/24x24.png" alt="SmarTable Logo" width={24} height={24} data-ai-hint="logo" />
+            <Image src="/images/logo.png" alt="SmarTable Logo" width={24} height={24} />
               <span className="font-bold">SmarTable</span>
             </a>
           </div>
