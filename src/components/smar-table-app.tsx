@@ -41,7 +41,7 @@ const LANGUAGES = [
   { value: 'Italian', label: 'Italian' },
 ];
 
-export default function LinguaTableApp() {
+export default function SmarTableApp() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [originalTable, setOriginalTable] = useState<TableData | null>(null);

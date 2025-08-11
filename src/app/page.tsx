@@ -1,4 +1,4 @@
-import LinguaTableApp from '@/components/lingua-table-app';
+import SmarTableApp from '@/components/smar-table-app';
 import { Logo } from '@/components/icons';
 
 export default function Home() {
@@ -9,13 +9,13 @@ export default function Home() {
           <div className="mr-4 flex items-center">
             <a className="flex items-center space-x-2" href="/">
               <Logo className="h-6 w-6" />
-              <span className="font-bold">LinguaTable</span>
+              <span className="font-bold">SmarTable</span>
             </a>
           </div>
         </div>
       </header>
       <main className="flex-1">
-        <LinguaTableApp />
+        <SmarTableApp />
       </main>
     </div>
   );
