@@ -64,11 +64,10 @@ const translateTableFlow = ai.defineFlow(
 
       Return only the translated content in the specified JSON format.
       `,
+      model: apiKey ? googleAI({apiKey}) : undefined,
     });
 
-    const {output} = await translateTablePrompt(input, {
-        plugins: apiKey ? [googleAI({apiKey})] : undefined,
-    });
+    const {output} = await translateTablePrompt(input);
     return output!;
   }
 );
