@@ -11,11 +11,11 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { handleExtractTable, handleTranslateTable } from '@/app/actions';
+import { handleExtractTable, handleGenerateWordDoc, handleTranslateTable } from '@/app/actions';
 import { downloadCsv, formatCsv, parseCsv, type TableData } from '@/lib/csv';
 import { FileUpload } from './file-upload';
 import { DataTable } from './data-table';
-import { Download, Languages, Loader2, ArrowRight } from 'lucide-react';
+import { Download, Languages, Loader2, FileText, ArrowRight } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -26,6 +26,7 @@ import {
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
+import { downloadFile } from '@/lib/download';
 
 const LANGUAGES = [
   { value: 'English', label: 'English' },
@@ -53,6 +54,7 @@ export default function LinguaTableApp() {
   const [targetLang, setTargetLang] = useState<string>('English');
   const [isExtracting, setIsExtracting] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
   const { toast } = useToast();
 
   const handleFileSelect = async (file: File) => {
@@ -133,6 +135,40 @@ export default function LinguaTableApp() {
     setIsTranslating(false);
   };
 
+  const handleDownloadDoc = async (
+    docTitle: string,
+    docTable: TableData,
+    docFootnotes: string,
+    filename: string
+  ) => {
+    setIsGeneratingDoc(true);
+    const result = await handleGenerateWordDoc({
+      title: docTitle,
+      tableData: formatCsv(docTable),
+      footnotes: docFootnotes,
+    });
+
+    if (result.success && result.data) {
+      downloadFile(
+        result.data.docBase64,
+        filename,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      );
+      toast({
+        title: 'Success!',
+        description: 'Word document generated.',
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Uh oh! Something went wrong.',
+        description: result.error,
+      });
+    }
+    setIsGeneratingDoc(false);
+  };
+
+
   const handleReset = () => {
     setImagePreview(null);
     setOriginalTable(null);
@@ -145,7 +181,7 @@ export default function LinguaTableApp() {
     setIsTranslating(false);
   };
 
-  const isProcessing = isExtracting || isTranslating;
+  const isProcessing = isExtracting || isTranslating || isGeneratingDoc;
 
   return (
     <div className="container py-8">
@@ -227,18 +263,29 @@ export default function LinguaTableApp() {
                   >
                     Start Over
                   </Button>
-                  <Button
-                    onClick={() =>
-                      downloadCsv(
-                        formatCsv(originalTable),
-                        'original_table.csv'
-                      )
-                    }
-                    disabled={isProcessing}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Original (CSV)
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() =>
+                        handleDownloadDoc(title, originalTable, footnotes, 'original_table.docx')
+                      }
+                      disabled={isProcessing}
+                    >
+                      {isGeneratingDoc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                      Download (Word)
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        downloadCsv(
+                          formatCsv(originalTable),
+                          'original_table.csv'
+                        )
+                      }
+                      disabled={isProcessing}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download (CSV)
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -318,7 +365,16 @@ export default function LinguaTableApp() {
                       />
                     </div>
                   )}
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-4 flex justify-end gap-2">
+                    <Button
+                      onClick={() =>
+                        handleDownloadDoc(translatedTitle, translatedTable, translatedFootnotes, `translated_table_${targetLang}.docx`)
+                      }
+                      disabled={isProcessing}
+                    >
+                      {isGeneratingDoc ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                      Download (Word)
+                    </Button>
                     <Button
                       onClick={() =>
                         downloadCsv(
@@ -329,7 +385,7 @@ export default function LinguaTableApp() {
                       disabled={isProcessing}
                     >
                       <Download className="mr-2 h-4 w-4" />
-                      Download Translated (CSV)
+                      Download (CSV)
                     </Button>
                   </div>
                 </div>
