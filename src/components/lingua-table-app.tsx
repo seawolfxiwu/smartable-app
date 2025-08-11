@@ -23,6 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
+import { Input } from './ui/input';
 
 const LANGUAGES = [
   { value: 'English', label: 'English' },
@@ -39,8 +42,12 @@ const LANGUAGES = [
 
 export default function LinguaTableApp() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [title, setTitle] = useState<string | undefined>('');
   const [originalTable, setOriginalTable] = useState<TableData | null>(null);
-  const [translatedTable, setTranslatedTable] = useState<TableData | null>(null);
+  const [footnotes, setFootnotes] = useState<string | undefined>('');
+  const [translatedTable, setTranslatedTable] = useState<TableData | null>(
+    null
+  );
   const [targetLang, setTargetLang] = useState<string>('English');
   const [isExtracting, setIsExtracting] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -50,16 +57,20 @@ export default function LinguaTableApp() {
     setIsExtracting(true);
     setOriginalTable(null);
     setTranslatedTable(null);
+    setTitle('');
+    setFootnotes('');
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async () => {
       const dataUri = reader.result as string;
       setImagePreview(dataUri);
-      
+
       const result = await handleExtractTable(dataUri);
-      if (result.success) {
-        setOriginalTable(parseCsv(result.data));
+      if (result.success && result.data) {
+        setOriginalTable(parseCsv(result.data.tableData));
+        setTitle(result.data.title);
+        setFootnotes(result.data.footnotes);
         toast({
           title: 'Success!',
           description: 'Table extracted from image.',
@@ -89,11 +100,36 @@ export default function LinguaTableApp() {
     setIsTranslating(true);
     setTranslatedTable(null);
 
-    const csvData = formatCsv(originalTable);
-    const result = await handleTranslateTable(csvData, targetLang);
+    const tableDataWithContext = [
+      title,
+      formatCsv(originalTable),
+      footnotes,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const result = await handleTranslateTable(tableDataWithContext, targetLang);
 
     if (result.success) {
-      setTranslatedTable(parseCsv(result.data));
+      // The translated result might contain title and footnotes as well.
+      // We will assume the main table is the largest block of CSV-like text.
+      const parts = result.data.split(/\n\n/);
+      let translatedCsv = result.data;
+      if (parts.length > 1) {
+        // A simple heuristic: find the largest part and assume it's the table
+        let largestPart = '';
+        let maxLines = 0;
+        parts.forEach((part) => {
+          const lines = part.split('\n').length;
+          if (lines > maxLines) {
+            maxLines = lines;
+            largestPart = part;
+          }
+        });
+        translatedCsv = largestPart;
+      }
+      setTranslatedTable(parseCsv(translatedCsv));
+
       toast({
         title: 'Success!',
         description: `Table translated to ${targetLang}.`,
@@ -107,14 +143,16 @@ export default function LinguaTableApp() {
     }
     setIsTranslating(false);
   };
-  
+
   const handleReset = () => {
     setImagePreview(null);
     setOriginalTable(null);
     setTranslatedTable(null);
+    setTitle('');
+    setFootnotes('');
     setIsExtracting(false);
     setIsTranslating(false);
-  }
+  };
 
   const isProcessing = isExtracting || isTranslating;
 
@@ -158,18 +196,61 @@ export default function LinguaTableApp() {
             <div className="space-y-6 animate-in fade-in duration-500">
               <div>
                 <h3 className="text-xl font-semibold mb-2">Original Table</h3>
-                <DataTable data={originalTable} onUpdate={setOriginalTable} isProcessing={isProcessing}/>
+                <div className="space-y-4">
+                  {title && (
+                    <div className="space-y-1">
+                      <Label htmlFor="title">Title</Label>
+                      <Input
+                        id="title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        disabled={isProcessing}
+                        className="text-lg font-semibold"
+                      />
+                    </div>
+                  )}
+                  <DataTable
+                    data={originalTable}
+                    onUpdate={setOriginalTable}
+                    isProcessing={isProcessing}
+                  />
+                  {footnotes && (
+                    <div className="space-y-1">
+                      <Label htmlFor="footnotes">Footnotes</Label>
+                      <Textarea
+                        id="footnotes"
+                        value={footnotes}
+                        onChange={(e) => setFootnotes(e.target.value)}
+                        disabled={isProcessing}
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="mt-4 flex justify-between items-center">
-                    <Button variant="outline" onClick={handleReset} disabled={isProcessing}>
-                        Start Over
-                    </Button>
-                    <Button onClick={() => downloadCsv(formatCsv(originalTable), 'original_table.csv')} disabled={isProcessing}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Original (CSV)
-                    </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleReset}
+                    disabled={isProcessing}
+                  >
+                    Start Over
+                  </Button>
+                  <Button
+                    onClick={() =>
+                      downloadCsv(
+                        formatCsv(originalTable),
+                        'original_table.csv'
+                      )
+                    }
+                    disabled={isProcessing}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download Original (CSV)
+                  </Button>
                 </div>
               </div>
-              
+
               <div className="p-4 rounded-lg border bg-muted/50">
                 <h3 className="text-xl font-semibold mb-3">Translate Table</h3>
                 <div className="flex items-center gap-4">
@@ -189,7 +270,10 @@ export default function LinguaTableApp() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button onClick={handleTranslate} disabled={isProcessing || !originalTable}>
+                  <Button
+                    onClick={handleTranslate}
+                    disabled={isProcessing || !originalTable}
+                  >
                     {isTranslating ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -202,21 +286,37 @@ export default function LinguaTableApp() {
 
               {isTranslating && (
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <p className="text-muted-foreground">Translating to {targetLang}...</p>
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-muted-foreground">
+                    Translating to {targetLang}...
+                  </p>
                 </div>
               )}
 
               {translatedTable && (
-                 <div className="space-y-2 animate-in fade-in duration-500">
-                    <h3 className="text-xl font-semibold">Translated Table ({targetLang})</h3>
-                    <DataTable data={translatedTable} onUpdate={setTranslatedTable} isProcessing={isProcessing} />
-                    <div className="mt-4 flex justify-end">
-                      <Button onClick={() => downloadCsv(formatCsv(translatedTable), `translated_table_${targetLang}.csv`)} disabled={isProcessing}>
-                          <Download className="mr-2 h-4 w-4" />
-                          Download Translated (CSV)
-                      </Button>
-                    </div>
+                <div className="space-y-2 animate-in fade-in duration-500">
+                  <h3 className="text-xl font-semibold">
+                    Translated Table ({targetLang})
+                  </h3>
+                  <DataTable
+                    data={translatedTable}
+                    onUpdate={setTranslatedTable}
+                    isProcessing={isProcessing}
+                  />
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      onClick={() =>
+                        downloadCsv(
+                          formatCsv(translatedTable),
+                          `translated_table_${targetLang}.csv`
+                        )
+                      }
+                      disabled={isProcessing}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Translated (CSV)
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>

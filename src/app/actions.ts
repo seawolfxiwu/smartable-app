@@ -6,7 +6,7 @@ import { translateTable } from '@/ai/flows/translate-table';
 export async function handleExtractTable(photoDataUri: string) {
   try {
     const result = await extractTable({ photoDataUri });
-    return { success: true, data: result.tableData };
+    return { success: true, data: result };
   } catch (error) {
     console.error('Error extracting table:', error);
     return { success: false, error: 'Failed to extract table from image.' };
