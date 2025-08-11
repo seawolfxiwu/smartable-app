@@ -187,12 +187,25 @@ export default function SmarTableApp() {
     <div className="container py-8">
       <Card className="max-w-4xl mx-auto shadow-lg">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold">
-            Upload Your Table Image
-          </CardTitle>
-          <CardDescription>
-            Extract data from an image and translate it instantly.
-          </CardDescription>
+          <div className="flex justify-between items-start">
+            <div className="space-y-1.5">
+              <CardTitle className="text-3xl font-bold">
+                Upload Your Table Image
+              </CardTitle>
+              <CardDescription>
+                Extract data from an image and translate it instantly.
+              </CardDescription>
+            </div>
+            {originalTable && (
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                disabled={isProcessing}
+              >
+                Start Over
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {!originalTable && (
@@ -255,14 +268,7 @@ export default function SmarTableApp() {
                   )}
                 </div>
 
-                <div className="mt-4 flex justify-between items-center">
-                  <Button
-                    variant="outline"
-                    onClick={handleReset}
-                    disabled={isProcessing}
-                  >
-                    Start Over
-                  </Button>
+                <div className="mt-4 flex justify-end items-center">
                   <div className="flex gap-2">
                     <Button
                       onClick={() =>
