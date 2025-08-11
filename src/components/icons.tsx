@@ -1,5 +1,6 @@
 import type { SVGProps } from 'react';
 
+// This component is no longer used for the logo, but is kept for other potential uses.
 export function Logo(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

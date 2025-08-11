@@ -1,5 +1,5 @@
 import SmarTableApp from '@/components/smar-table-app';
-import { Logo } from '@/components/icons';
+import Image from 'next/image';
 
 export default function Home() {
   return (
@@ -8,7 +8,7 @@ export default function Home() {
         <div className="container flex h-14 items-center">
           <div className="mr-4 flex items-center">
             <a className="flex items-center space-x-2" href="/">
-              <Logo className="h-6 w-6" />
+              <Image src="https://placehold.co/24x24.png" alt="SmarTable Logo" width={24} height={24} data-ai-hint="logo" />
               <span className="font-bold">SmarTable</span>
             </a>
           </div>
