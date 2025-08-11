@@ -1,5 +1,5 @@
 // This file is machine-generated - edit at your own risk.
-'use a';
+'use server';
 
 /**
  * @fileOverview Generates a Word document from table data.
@@ -22,7 +22,7 @@ import {
   AlignmentType,
   WidthType,
 } from 'docx';
-import {parseCsv, type TableData} from '@/lib/csv';
+import {parseCsv} from '@/lib/csv';
 
 const GenerateWordDocInputSchema = z.object({
   title: z.string().optional().describe('The title of the document.'),
@@ -98,7 +98,7 @@ const generateWordDocFlow = ai.defineFlow(
             ...(footnotes
               ? [
                   new Paragraph({
-                    children: [new TextRun({text: footnotes, a: true})],
+                    children: [new TextRun({text: footnotes, italic: true})],
                     spacing: {before: 200},
                   }),
                 ]
