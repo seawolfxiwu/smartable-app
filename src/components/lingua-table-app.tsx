@@ -42,12 +42,14 @@ const LANGUAGES = [
 
 export default function LinguaTableApp() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [title, setTitle] = useState<string | undefined>('');
+  const [title, setTitle] = useState('');
   const [originalTable, setOriginalTable] = useState<TableData | null>(null);
-  const [footnotes, setFootnotes] = useState<string | undefined>('');
-  const [translatedTable, setTranslatedTable] = useState<TableData | null>(
-    null
-  );
+  const [footnotes, setFootnotes] = useState('');
+  
+  const [translatedTitle, setTranslatedTitle] = useState('');
+  const [translatedTable, setTranslatedTable] = useState<TableData | null>(null);
+  const [translatedFootnotes, setTranslatedFootnotes] = useState('');
+
   const [targetLang, setTargetLang] = useState<string>('English');
   const [isExtracting, setIsExtracting] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
@@ -59,6 +61,9 @@ export default function LinguaTableApp() {
     setTranslatedTable(null);
     setTitle('');
     setFootnotes('');
+    setTranslatedTitle('');
+    setTranslatedFootnotes('');
+
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -69,8 +74,8 @@ export default function LinguaTableApp() {
       const result = await handleExtractTable(dataUri);
       if (result.success && result.data) {
         setOriginalTable(parseCsv(result.data.tableData));
-        setTitle(result.data.title);
-        setFootnotes(result.data.footnotes);
+        setTitle(result.data.title || '');
+        setFootnotes(result.data.footnotes || '');
         toast({
           title: 'Success!',
           description: 'Table extracted from image.',
@@ -99,36 +104,20 @@ export default function LinguaTableApp() {
     if (!originalTable) return;
     setIsTranslating(true);
     setTranslatedTable(null);
+    setTranslatedTitle('');
+    setTranslatedFootnotes('');
 
-    const tableDataWithContext = [
+    const result = await handleTranslateTable({
+      tableData: formatCsv(originalTable),
       title,
-      formatCsv(originalTable),
       footnotes,
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+      targetLanguage: targetLang,
+    });
 
-    const result = await handleTranslateTable(tableDataWithContext, targetLang);
-
-    if (result.success) {
-      // The translated result might contain title and footnotes as well.
-      // We will assume the main table is the largest block of CSV-like text.
-      const parts = result.data.split(/\n\n/);
-      let translatedCsv = result.data;
-      if (parts.length > 1) {
-        // A simple heuristic: find the largest part and assume it's the table
-        let largestPart = '';
-        let maxLines = 0;
-        parts.forEach((part) => {
-          const lines = part.split('\n').length;
-          if (lines > maxLines) {
-            maxLines = lines;
-            largestPart = part;
-          }
-        });
-        translatedCsv = largestPart;
-      }
-      setTranslatedTable(parseCsv(translatedCsv));
+    if (result.success && result.data) {
+      setTranslatedTable(parseCsv(result.data.translatedTableData));
+      setTranslatedTitle(result.data.translatedTitle || '');
+      setTranslatedFootnotes(result.data.translatedFootnotes || '');
 
       toast({
         title: 'Success!',
@@ -150,6 +139,8 @@ export default function LinguaTableApp() {
     setTranslatedTable(null);
     setTitle('');
     setFootnotes('');
+    setTranslatedTitle('');
+    setTranslatedFootnotes('');
     setIsExtracting(false);
     setIsTranslating(false);
   };
@@ -294,15 +285,39 @@ export default function LinguaTableApp() {
               )}
 
               {translatedTable && (
-                <div className="space-y-2 animate-in fade-in duration-500">
+                <div className="space-y-4 animate-in fade-in duration-500">
                   <h3 className="text-xl font-semibold">
                     Translated Table ({targetLang})
                   </h3>
+                   {translatedTitle && (
+                    <div className="space-y-1">
+                      <Label htmlFor="translated-title">Title</Label>
+                      <Input
+                        id="translated-title"
+                        value={translatedTitle}
+                        onChange={(e) => setTranslatedTitle(e.target.value)}
+                        disabled={isProcessing}
+                        className="text-lg font-semibold"
+                      />
+                    </div>
+                  )}
                   <DataTable
                     data={translatedTable}
                     onUpdate={setTranslatedTable}
                     isProcessing={isProcessing}
                   />
+                  {translatedFootnotes && (
+                    <div className="space-y-1">
+                      <Label htmlFor="translated-footnotes">Footnotes</Label>
+                      <Textarea
+                        id="translated-footnotes"
+                        value={translatedFootnotes}
+                        onChange={(e) => setTranslatedFootnotes(e.target.value)}
+                        disabled={isProcessing}
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
                   <div className="mt-4 flex justify-end">
                     <Button
                       onClick={() =>

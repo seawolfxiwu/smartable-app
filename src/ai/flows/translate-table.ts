@@ -12,13 +12,17 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const TranslateTableInputSchema = z.object({
-  tableData: z.string().describe('The table data to translate, in string format.'),
-  targetLanguage: z.string().describe('The target language to translate the table data to. Defaults to English if not provided. Examples: English, Spanish, French, Chinese.'),
+  tableData: z.string().describe('The table data to translate, in CSV format.'),
+  title: z.string().optional().describe('The title of the table.'),
+  footnotes: z.string().optional().describe('The footnotes of the table.'),
+  targetLanguage: z.string().describe('The target language to translate to. Examples: English, Spanish, French, Chinese.'),
 });
 export type TranslateTableInput = z.infer<typeof TranslateTableInputSchema>;
 
 const TranslateTableOutputSchema = z.object({
-  translatedTableData: z.string().describe('The translated table data in string format.'),
+  translatedTableData: z.string().describe('The translated table data in the same format as the input.'),
+  translatedTitle: z.string().optional().describe('The translated title of the table.'),
+  translatedFootnotes: z.string().optional().describe('The translated footnotes of the table.'),
 });
 export type TranslateTableOutput = z.infer<typeof TranslateTableOutputSchema>;
 
@@ -32,13 +36,23 @@ const translateTablePrompt = ai.definePrompt({
   output: {schema: TranslateTableOutputSchema},
   prompt: `You are a translation expert.
 
-  Translate the following table data to the target language, maintaining the original format and structure.
+  Translate the following table title, data, and footnotes to the target language, maintaining the original format and structure.
   The target language is: {{{targetLanguage}}}.
 
-  Here is the table data:
+  {{#if title}}
+  Title:
+  {{{title}}}
+  {{/if}}
+
+  Table Data (CSV):
   {{{tableData}}}
 
-  Return only the translated table data in the same format as the input.
+  {{#if footnotes}}
+  Footnotes:
+  {{{footnotes}}}
+  {{/if}}
+
+  Return only the translated content in the specified JSON format.
   `,
 });
 
