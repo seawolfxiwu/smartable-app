@@ -31,7 +31,7 @@ const ExtractTableOutputSchema = z.object({
 export type ExtractTableOutput = z.infer<typeof ExtractTableOutputSchema>;
 
 export async function extractTable(input: ExtractTableInput, apiKey?: string): Promise<ExtractTableOutput> {
-  return extractTableFlow(input, apiKey);
+  return extractTableFlow(input, { auth: apiKey });
 }
 
 const extractTableFlow = ai.defineFlow(
